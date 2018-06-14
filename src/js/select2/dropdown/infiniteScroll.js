@@ -1,25 +1,46 @@
-define([
+define('select2/dropdown/infiniteScroll',[
   'jquery'
 ], function ($) {
-  function InfiniteScroll (decorated, $element, options, dataAdapter) {
-    this.lastParams = {};
+    function InfiniteScroll(decorated, $element, options, dataAdapter) {
+        this.lastParams = {};
 
-    decorated.call(this, $element, options, dataAdapter);
+        decorated.call(this, $element, options, dataAdapter);
 
-    this.$loadingMore = this.createLoadingMore();
-    this.loading = false;
-  }
-
-  InfiniteScroll.prototype.append = function (decorated, data) {
-    this.$loadingMore.remove();
-    this.loading = false;
-
-    decorated.call(this, data);
-
-    if (this.showLoadingMore(data)) {
-      this.$results.append(this.$loadingMore);
+        this.$loadingMore = this.createLoadingMore();
+        this.loading = false;
     }
-  };
+
+    InfiniteScroll.prototype.append = function (decorated, data) {
+        this.$loadingMore.remove();
+        this.loading = false;
+
+        decorated.call(this, data);
+
+        if (this.showLoadingMore(data)) {
+            this.$results.append(this.$loadingMore);
+            this.loadMoreIfLoadingMoreVisible();
+        }
+    };
+
+    InfiniteScroll.prototype.loadMoreIfLoadingMoreVisible = function () {
+        var isLoadMoreVisible = $.contains(
+            document.documentElement,
+            this.$loadingMore[0]
+        );
+
+        if (this.loading || !isLoadMoreVisible) {
+            return;
+        }
+
+        var currentOffset = this.$results.offset().top +
+            this.$results.outerHeight(false);
+        var loadingMoreOffset = this.$loadingMore.offset().top +
+            this.$loadingMore.outerHeight(false);
+        if (currentOffset + 50 >= loadingMoreOffset) {
+            this.loadMore();
+        }
+    };
+
 
   InfiniteScroll.prototype.bind = function (decorated, container, $container) {
     var self = this;
@@ -36,25 +57,7 @@ define([
       self.loading = true;
     });
 
-    this.$results.on('scroll', function () {
-      var isLoadMoreVisible = $.contains(
-        document.documentElement,
-        self.$loadingMore[0]
-      );
-
-      if (self.loading || !isLoadMoreVisible) {
-        return;
-      }
-
-      var currentOffset = self.$results.offset().top +
-        self.$results.outerHeight(false);
-      var loadingMoreOffset = self.$loadingMore.offset().top +
-        self.$loadingMore.outerHeight(false);
-
-      if (currentOffset + 50 >= loadingMoreOffset) {
-        self.loadMore();
-      }
-    });
+    this.$results.on('scroll', this.loadMoreIfLoadingMoreVisible.bind(this));
   };
 
   InfiniteScroll.prototype.loadMore = function () {
